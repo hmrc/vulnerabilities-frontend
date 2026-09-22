@@ -1,0 +1,79 @@
+@*
+ * Copyright 2026 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *@
+
+@import models.{OccurrencePriority, OccurrenceState}
+@import viewmodels.OccurrenceFilters
+@this()
+@(teams: Seq[String], services: Seq[String], filters: OccurrenceFilters, action: String)
+<form method="get" action="@action" class="card card-body bg-body-tertiary mb-4" aria-label="Filter occurrences">
+  <div class="row g-3 align-items-end">
+    <div class="col-sm-6 col-lg-3">
+      <label class="form-label" for="team">Team</label>
+      <select class="form-select" id="team" name="team">
+        <option value="">All teams</option>
+        @for(team <- (teams ++ filters.team).distinct) {
+          <option value="@team" @if(filters.team.contains(team)){selected}>@team</option>
+        }
+      </select>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <label class="form-label" for="service">Service</label>
+      <select class="form-select" id="service" name="service">
+        <option value="">All services</option>
+        @for(service <- (services ++ filters.service).distinct) {
+          <option value="@service" @if(filters.service.contains(service)){selected}>@service</option>
+        }
+      </select>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <label class="form-label" for="state">State</label>
+      <select class="form-select" id="state" name="state">
+        <option value="">All states</option>
+        @for(state <- OccurrenceState.values) {
+          <option value="@state.value" @if(filters.state.contains(state.value)){selected}>@state.label</option>
+        }
+        @for(state <- filters.state.filterNot(value => OccurrenceState.values.exists(_.value == value))) {
+          <option value="@state" selected>Unknown state: @state</option>
+        }
+      </select>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <label class="form-label" for="priority">Priority</label>
+      <select class="form-select" id="priority" name="priority">
+        <option value="">All priorities</option>
+        @for(priority <- OccurrencePriority.values) {
+          <option value="@priority.value" @if(filters.priority.contains(priority.value)){selected}>@priority.label</option>
+        }
+        @for(priority <- filters.priority.filterNot(value => OccurrencePriority.values.exists(_.value == value))) {
+          <option value="@priority" selected>Unknown priority: @priority</option>
+        }
+      </select>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <label class="form-label" for="slaStatus">SLA status</label>
+      <select class="form-select" id="slaStatus" name="slaStatus">
+        <option value="">All SLA statuses</option>
+        <option value="breached" @if(filters.slaStatus.contains("breached")){selected}>Breached</option>
+        <option value="nearBreach" @if(filters.slaStatus.contains("nearBreach")){selected}>Near breach</option>
+        @for(status <- filters.slaStatus.filterNot(Set("breached", "nearBreach"))) {
+          <option value="@status" selected>Unknown SLA status: @status</option>
+        }
+      </select>
+    </div>
+    <div class="col-sm-6 col-lg-3"><button class="btn btn-primary" type="submit">Apply filters</button></div>
+  </div>
+  @if(filters.active) { <a class="mt-3" href="@action">Clear filters</a> }
+</form>

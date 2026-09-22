@@ -1,4 +1,4 @@
-@*
+/*
  * Copyright 2026 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +12,18 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *@
+ */
 
-@this()
+package models.releases
 
-@(heading: String, message: String)(implicit messages: Messages)
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.{Reads, __}
 
-<h1 class="page-heading">@messages(heading)</h1>
-<p>@messages(message)</p>
-<a href="@controllers.routes.IndexController.onPageLoad()">Return to vulnerabilities</a>
+case class WhatsRunningWhereVersion(environment: String, version: String)
+
+object WhatsRunningWhereVersion {
+  given Reads[WhatsRunningWhereVersion] = (
+    (__ \ "environment").read[String] and
+    (__ \ "versionNumber").read[String]
+  )(WhatsRunningWhereVersion.apply)
+}

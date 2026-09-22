@@ -1,0 +1,73 @@
+{
+  "results": [
+    {
+      "vulnerabilityId": "CVE-2099-1234",
+      "serviceName": "integration-alpha",
+      "appVersion": "1.2.3",
+      "teamNames": [
+        "AEM Upgrade",
+        "Platform & Tools"
+      ],
+      "component": "gav://uk.gov.hmrc:integration-lib",
+      "componentVersion": "2.4.0",
+      "scope": "compile",
+      "importedBy": {
+        "group": "uk.gov.hmrc",
+        "artefact": "parent-lib",
+        "version": "3.1.0"
+      },
+      "priority": "immediate",
+      "sla": {
+        "clockStartedAt": "2026-06-14T09:30:00Z",
+        "deadline": "2026-06-28T09:30:00Z",
+        "daysRemaining": -59,
+        "breached": true,
+        "paused": false
+      },
+      "state": {
+        "value": "actionable",
+        "slaPaused": false
+      },
+      "firstDetected": "2026-06-14T09:30:00Z"
+    },
+    {
+      "vulnerabilityId": "CVE-2099-1234",
+      "serviceName": "integration-beta",
+      "appVersion": "2.0.0",
+      "teamNames": [
+        "Payments"
+      ],
+      "component": "gav://uk.gov.hmrc:integration-lib",
+      "componentVersion": "2.4.0",
+      "scope": "compile",
+      "importedBy": {
+        "group": "uk.gov.hmrc",
+        "artefact": "parent-lib",
+        "version": "3.1.0"
+      },
+      "priority": "monitor",
+      "sla": {
+        "clockStartedAt": "2026-06-14T09:30:00Z",
+        "deadline": "2026-06-28T09:30:00Z",
+        "daysRemaining": 0,
+        "breached": false,
+        "paused": false
+      },
+      "state": {
+        "value": "resolved",
+        "slaPaused": false
+      },
+      "firstDetected": "2026-06-14T09:30:00Z",
+      "resolution": {
+        "last_affected_app_version": "2.0.0",
+        "fixed_in_app_version": "2.1.0",
+        "resolved_at": "2026-09-22T09:30:00Z"
+      }
+    }
+  ],
+  "page": {
+    "limit": 2,
+    "offset": 0,
+    "total": 3
+  }
+}

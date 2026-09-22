@@ -14,10 +14,15 @@
  * limitations under the License.
  *@
 
+@import models.SourceLink
 @this()
-
-@(heading: String, message: String)(implicit messages: Messages)
-
-<h1 class="page-heading">@messages(heading)</h1>
-<p>@messages(message)</p>
-<a href="@controllers.routes.IndexController.onPageLoad()">Return to vulnerabilities</a>
+@(sources: Seq[SourceLink])
+@if(sources.isEmpty) {
+  <p class="text-body-secondary mb-0">No sources recorded.</p>
+} else {
+  <ul class="list-unstyled source-links mb-0">
+    @for(source <- sources) {
+      <li><a href="@source.url">@source.label</a><span class="source-url text-body-secondary">@source.url</span></li>
+    }
+  </ul>
+}

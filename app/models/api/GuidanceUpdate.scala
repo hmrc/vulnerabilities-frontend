@@ -1,4 +1,4 @@
-@*
+/*
  * Copyright 2026 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +12,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *@
+ */
 
-@this()
+package models.api
 
-@(heading: String, message: String)(implicit messages: Messages)
+import play.api.libs.json.{JsNull, JsString, JsValue, Json, OWrites}
 
-<h1 class="page-heading">@messages(heading)</h1>
-<p>@messages(message)</p>
-<a href="@controllers.routes.IndexController.onPageLoad()">Return to vulnerabilities</a>
+case class GuidanceUpdate(guidance: Option[String], comment: String, author: String)
+
+object GuidanceUpdate {
+  given OWrites[GuidanceUpdate] = OWrites { update =>
+    Json.obj("guidance" -> update.guidance.fold[JsValue](JsNull)(JsString.apply), "comment" -> update.comment, "author" -> update.author)
+  }
+}

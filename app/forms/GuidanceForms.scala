@@ -1,4 +1,4 @@
-@*
+/*
  * Copyright 2026 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +12,21 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *@
+ */
 
-@this()
+package forms
 
-@(heading: String, message: String)(implicit messages: Messages)
+import play.api.data.Form
+import play.api.data.Forms.*
 
-<h1 class="page-heading">@messages(heading)</h1>
-<p>@messages(message)</p>
-<a href="@controllers.routes.IndexController.onPageLoad()">Return to vulnerabilities</a>
+object GuidanceForms {
+  private def content(label: String, maximum: Int) = text.transform[String](_.trim, identity)
+    .verifying(s"Enter $label", _.nonEmpty)
+    .verifying(s"$label must be $maximum characters or fewer", _.length <= maximum)
+
+  val save: Form[(String, String)] = Form(tuple(
+    "guidance" -> content("guidance", 10000),
+    "comment" -> content("a reason for this change", 1000)
+  ))
+  val delete: Form[String] = Form(single("comment" -> content("a reason for this change", 1000)))
+}

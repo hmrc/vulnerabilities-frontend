@@ -1,4 +1,4 @@
-@*
+/*
  * Copyright 2026 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +12,15 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *@
+ */
 
-@this()
+package controllers.actions
 
-@(heading: String, message: String)(implicit messages: Messages)
+import javax.inject.Inject
+import play.api.mvc.*
+import scala.concurrent.{ExecutionContext, Future}
 
-<h1 class="page-heading">@messages(heading)</h1>
-<p>@messages(message)</p>
-<a href="@controllers.routes.IndexController.onPageLoad()">Return to vulnerabilities</a>
+class FakeInternalAuthAction @Inject() (val parser: BodyParsers.Default)(implicit val executionContext: ExecutionContext) extends InternalAuthAction {
+  override def invokeBlock[A](request: Request[A], block: InternalAuthRequest[A] => Future[Result]): Future[Result] =
+    block(new InternalAuthRequest(request, canManageGuidance = false, username = "test-reader"))
+}

@@ -1,4 +1,4 @@
-@*
+/*
  * Copyright 2026 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,12 +12,20 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *@
+ */
 
-@this()
+package services
 
-@(heading: String, message: String)(implicit messages: Messages)
+import models.releases.{WhatsRunningWhere, WhatsRunningWhereVersion}
 
-<h1 class="page-heading">@messages(heading)</h1>
-<p>@messages(message)</p>
-<a href="@controllers.routes.IndexController.onPageLoad()">Return to vulnerabilities</a>
+object SampleReleasesData {
+  val services: Seq[WhatsRunningWhere] = Seq(
+    WhatsRunningWhere("example-payments-api", List(
+      WhatsRunningWhereVersion("production", "1.8.0"),
+      WhatsRunningWhereVersion("staging", "1.8.0"),
+      WhatsRunningWhereVersion("qa", "1.7.0")
+    )),
+    WhatsRunningWhere("example-payments-frontend", List(WhatsRunningWhereVersion("production", "3.2.0"))),
+    WhatsRunningWhere("example-audit-service", List(WhatsRunningWhereVersion("production", "2.4.0")))
+  )
+}

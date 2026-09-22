@@ -1,0 +1,19 @@
+{
+  "brand": {
+    "name": "MDTP",
+    "id": "brand",
+    "href": "/",
+    "external": false,
+    "_type": "TopMenu"
+  },
+  "topLevelLinks": [
+    {
+      "name": "Vulnerabilities",
+      "id": "vulnerabilities",
+      "href": "/vulnerabilities-frontend/vulnerabilities",
+      "external": false,
+      "_type": "TopMenu"
+    }
+  ],
+  "dropdowns": []
+}
