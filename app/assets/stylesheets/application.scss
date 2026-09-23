@@ -1,11 +1,11 @@
-/*
-    Styling in this and other .scss files will be compiled by the sbt-sass-compiler plugin: https://github.com/hmrc/sbt-sass-compiler
-    If you encounter any issue with Sass compilation using the plugin, please reach out to the PlatUI team.
- */
-
-.js-visible {
-  display: none !important;
-}
-.js-enabled .js-visible {
-  display: inline-block !important;
+.vulnerability-page {
+  .source-links li + li { margin-top: 0.75rem; }
+  .source-url { display: block; font-size: 0.8rem; overflow-wrap: anywhere; }
+  .guidance-card { border-left: 4px solid var(--bs-primary); }
+  .occurrence-table { min-width: 780px; }
+  .occurrence-table th, .occurrence-table td { padding: 1rem; vertical-align: top; }
+  .dependency-context { max-width: 360px; overflow-wrap: anywhere; }
+  section[id] { scroll-margin-top: 1rem; }
+  a:focus-visible, summary:focus-visible { outline: 3px solid #ffdd00; outline-offset: 2px; }
+  .guidance-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 }

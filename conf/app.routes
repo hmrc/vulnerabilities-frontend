@@ -1,21 +1,17 @@
 # microservice specific routes
 
-->          /hmrc-frontend                               hmrcfrontend.Routes
+->          /catalogue-wrapper                           cataloguewrapper.Routes
 
 GET         /                                            controllers.IndexController.onPageLoad()
 
+GET         /vulnerabilities                             controllers.VulnerabilityController.index()
+GET         /vulnerabilities/:identifier                  controllers.VulnerabilityController.show(identifier: String)
+GET         /vulnerabilities/:id/guidance/edit             controllers.GuidanceController.edit(id: String)
+POST        /vulnerabilities/:id/guidance                  controllers.GuidanceController.save(id: String)
+GET         /vulnerabilities/:id/guidance/delete           controllers.GuidanceController.confirmDelete(id: String)
+POST        /vulnerabilities/:id/guidance/delete           controllers.GuidanceController.delete(id: String)
+GET         /catalogue-sign-out                          controllers.VulnerabilityController.signOut()
+
 GET         /assets/*file                                controllers.Assets.versioned(path="/public", file: Asset)
 
-GET         /language/:lang                              controllers.LanguageSwitchController.switchToLanguage(lang: String)
-
-GET         /refresh-session                             controllers.KeepAliveController.keepAlive()
-
-GET         /there-is-a-problem                          controllers.JourneyRecoveryController.onPageLoad(continueUrl: Option[RedirectUrl] ?= None)
-
-GET         /check-your-answers                          controllers.CheckYourAnswersController.onPageLoad()
-
-GET         /account/sign-out-survey                     controllers.auth.AuthController.signOut()
-GET         /account/sign-out                            controllers.auth.AuthController.signOutNoSurvey()
-GET         /account/signed-out                          controllers.auth.SignedOutController.onPageLoad()
-
-GET         /unauthorised                                controllers.UnauthorisedController.onPageLoad()
+GET         /account/signed-out                          controllers.SignedOutController.onPageLoad()

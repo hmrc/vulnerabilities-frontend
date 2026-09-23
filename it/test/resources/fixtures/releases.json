@@ -1,0 +1,24 @@
+[
+  {
+    "applicationName": "integration-alpha",
+    "versions": [
+      {
+        "environment": "production",
+        "versionNumber": "1.2.3"
+      },
+      {
+        "environment": "staging",
+        "versionNumber": "1.2.3"
+      }
+    ]
+  },
+  {
+    "applicationName": "integration-beta",
+    "versions": [
+      {
+        "environment": "production",
+        "versionNumber": "2.0.0"
+      }
+    ]
+  }
+]

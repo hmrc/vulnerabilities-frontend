@@ -1,0 +1,49 @@
+@*
+ * Copyright 2026 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *@
+
+@import play.api.data.Form
+@this()
+@(id: String, form: Form[?], deleting: Boolean)(implicit request: RequestHeader, messages: Messages)
+
+<h1 class="page-heading">@if(deleting){Delete platform guidance}else{Platform guidance}</h1>
+<p>@id</p>
+@if(form.hasErrors) {
+  <div class="alert alert-danger" role="alert">
+    <h2 class="h5">There is a problem</h2>
+    <ul class="mb-0">@for(error <- form.errors){<li>@if(error.key.nonEmpty){<a href="#@error.key">@messages(error.message, error.args*)</a>}else{@messages(error.message, error.args*)}</li>}</ul>
+  </div>
+}
+<form method="post" action="@if(deleting){@routes.GuidanceController.delete(id)}else{@routes.GuidanceController.save(id)}">
+  @helper.CSRF.formField
+  @if(deleting) {
+    <p>This removes the published guidance. The change and your reason will be recorded in history.</p>
+  } else {
+    <div class="mb-3">
+      <label class="form-label" for="guidance">Platform guidance</label>
+      <p id="guidance-hint" class="form-text">Plain text, up to 10,000 characters. Include source URLs where useful.</p>
+      <textarea class="form-control @if(form("guidance").hasErrors){is-invalid}" id="guidance" name="guidance" rows="10" maxlength="10000" required aria-describedby="guidance-hint guidance-error" aria-invalid="@form("guidance").hasErrors">@form("guidance").value</textarea>
+      <div id="guidance-error" class="invalid-feedback">@for(error <- form("guidance").errors){@messages(error.message, error.args*)}</div>
+    </div>
+  }
+  <div class="mb-3">
+    <label class="form-label" for="comment">Reason for change</label>
+    <p id="comment-hint" class="form-text">Recorded in history with your username, not shown in published guidance. Up to 1,000 characters.</p>
+    <textarea class="form-control @if(form("comment").hasErrors){is-invalid}" id="comment" name="comment" rows="3" maxlength="1000" required aria-describedby="comment-hint comment-error" aria-invalid="@form("comment").hasErrors">@form("comment").value</textarea>
+    <div id="comment-error" class="invalid-feedback">@for(error <- form("comment").errors){@messages(error.message, error.args*)}</div>
+  </div>
+  <button class="btn @if(deleting){btn-danger}else{btn-primary}" type="submit">@if(deleting){Delete guidance}else{Save guidance}</button>
+  <a class="ms-3" href="@(routes.VulnerabilityController.show(id).url + "#platops")">Cancel</a>
+</form>
