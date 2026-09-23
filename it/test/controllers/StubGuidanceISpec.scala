@@ -47,7 +47,7 @@ class StubGuidanceISpec extends IntegrationSpec {
         result.header("Location").value mustBe s"$detail#platops"
       }
       val initial = Jsoup.parse(request(detail).get().futureValue.body[String])
-      initial.select(s"a[href='$edit']").text() mustBe "Add guidance"
+      initial.select(s"a[href='$edit']").text() mustBe "Add platform guidance"
       initial.select(s"a[href='$delete']").isEmpty mustBe true
       Seq("First guidance", "Replacement guidance").foreach { text =>
         submit(request(edit).get().futureValue, save, Map("guidance" -> text, "comment" -> comment))
@@ -59,8 +59,8 @@ class StubGuidanceISpec extends IntegrationSpec {
       }
       submit(request(delete).get().futureValue, delete, Map("comment" -> comment))
       val removed = Jsoup.parse(request(detail).get().futureValue.body[String])
-      removed.select("#platops").text() must include("No platform guidance recorded")
-      removed.select(s"a[href='$edit']").text() mustBe "Add guidance"
+      removed.select("#platops").isEmpty mustBe true
+      removed.select(s"a[href='$edit']").text() mustBe "Add platform guidance"
       removed.text() must not include comment
       verify(0, putRequestedFor(urlMatching("/vulnerabilities/api/.*")))
     }

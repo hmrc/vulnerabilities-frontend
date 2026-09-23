@@ -17,8 +17,9 @@
 @import models.{OccurrencePriority, OccurrenceState}
 @import viewmodels.OccurrenceFilters
 @this()
-@(teams: Seq[String], services: Seq[String], filters: OccurrenceFilters, action: String)
+@(teams: Seq[String], services: Seq[String], filters: OccurrenceFilters, action: String, sortQuery: Seq[(String, String)] = Seq.empty, digitalServices: Seq[String] = Seq.empty)
 <form method="get" action="@action" class="card card-body bg-body-tertiary mb-4" aria-label="Filter occurrences">
+  @for((name, value) <- sortQuery){<input type="hidden" name="@name" value="@value">}
   <div class="row g-3 align-items-end">
     <div class="col-sm-6 col-lg-3">
       <label class="form-label" for="team">Team</label>
@@ -39,13 +40,22 @@
       </select>
     </div>
     <div class="col-sm-6 col-lg-3">
+      <label class="form-label" for="digitalService">Digital service</label>
+      <select class="form-select" id="digitalService" name="digitalService">
+        <option value="">All digital services</option>
+        @for(digitalService <- (digitalServices ++ filters.digitalService).distinct) {
+          <option value="@digitalService" @if(filters.digitalService.contains(digitalService)){selected}>@digitalService</option>
+        }
+      </select>
+    </div>
+    <div class="col-sm-6 col-lg-3">
       <label class="form-label" for="state">State</label>
       <select class="form-select" id="state" name="state">
-        <option value="">All states</option>
+        <option value="all" @if(filters.state.contains("all")){selected}>All states</option>
         @for(state <- OccurrenceState.values) {
           <option value="@state.value" @if(filters.state.contains(state.value)){selected}>@state.label</option>
         }
-        @for(state <- filters.state.filterNot(value => OccurrenceState.values.exists(_.value == value))) {
+        @for(state <- filters.state.filterNot(value => value == "all" || OccurrenceState.values.exists(_.value == value))) {
           <option value="@state" selected>Unknown state: @state</option>
         }
       </select>

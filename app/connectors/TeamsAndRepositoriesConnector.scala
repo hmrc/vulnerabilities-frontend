@@ -17,9 +17,8 @@
 package connectors
 
 import javax.inject.{Inject, Singleton}
-import models.releases.WhatsRunningWhere
+import models.{DirectoryService, DirectoryTeam, OrganisationDirectory}
 import play.api.Configuration
-import services.SampleReleasesData
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
 import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -28,26 +27,22 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
 
 @Singleton
-class ReleasesConnector @Inject() (
+class TeamsAndRepositoriesConnector @Inject() (
   httpClient: HttpClientV2,
   servicesConfig: ServicesConfig,
   configuration: Configuration
 )(implicit ec: ExecutionContext) {
-  private val baseUrl = servicesConfig.baseUrl("releases-api")
-  private val useStub = configuration.get[Boolean]("releases-api.use-stub")
-  private val cache = new SnapshotCache[Seq[WhatsRunningWhere]](configuration.get[FiniteDuration]("releases-api.cache-ttl"))
+  private val baseUrl = servicesConfig.baseUrl("teams-and-repositories")
+  private val cache = new SnapshotCache[OrganisationDirectory](configuration.get[FiniteDuration]("teams-and-repositories.cache-ttl"))
 
-  def getWhatsRunningWhere()(implicit hc: HeaderCarrier): Future[Seq[WhatsRunningWhere]] =
-    if (useStub) {
-      Future.successful(SampleReleasesData.services)
-    } else {
-      cache.get(httpClient.get(url"$baseUrl/releases-api/whats-running-where").execute[Seq[WhatsRunningWhere]])
-    }
-
-  def getWhatsRunningWhereForService(serviceName: String)(implicit hc: HeaderCarrier): Future[Option[WhatsRunningWhere]] =
-    if (useStub) {
-      Future.successful(SampleReleasesData.services.find(_.serviceName == serviceName))
-    } else {
-      httpClient.get(url"$baseUrl/releases-api/whats-running-where/$serviceName").execute[Option[WhatsRunningWhere]]
-    }
+  def getDirectory()(implicit hc: HeaderCarrier): Future[OrganisationDirectory] = cache.get {
+    val teams = httpClient.get(url"$baseUrl/api/v2/teams").execute[Seq[DirectoryTeam]]
+    val repositories = httpClient.get(url"$baseUrl/api/v2/repositories?repoType=Service").execute[Seq[DirectoryService]]
+    val digitalServices = httpClient.get(url"$baseUrl/api/v2/digital-services").execute[Seq[String]]
+    for {
+      allTeams <- teams
+      allRepositories <- repositories
+      allDigitalServices <- digitalServices
+    } yield OrganisationDirectory(allTeams.map(_.name).distinct.sorted, allRepositories, allDigitalServices.distinct.sorted)
+  }
 }

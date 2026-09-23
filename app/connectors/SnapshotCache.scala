@@ -16,20 +16,19 @@
 
 package connectors
 
-import models.releases.WhatsRunningWhere
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
-private[connectors] class WhatsRunningWhereCache(ttl: FiniteDuration, nanoTime: () => Long = () => System.nanoTime()) {
-  private var cached: Option[(Long, Seq[WhatsRunningWhere])] = None
-  private var inFlight: Option[Future[Seq[WhatsRunningWhere]]] = None
+private[connectors] class SnapshotCache[A](ttl: FiniteDuration, nanoTime: () => Long = () => System.nanoTime()) {
+  private var cached: Option[(Long, A)] = None
+  private var inFlight: Option[Future[A]] = None
 
-  def get(load: => Future[Seq[WhatsRunningWhere]])(implicit ec: ExecutionContext): Future[Seq[WhatsRunningWhere]] = synchronized {
+  def get(load: => Future[A])(implicit ec: ExecutionContext): Future[A] = synchronized {
     cached.filter { case (loadedAt, _) => nanoTime() - loadedAt < ttl.toNanos } match {
       case Some((_, values)) => Future.successful(values)
       case None => inFlight.getOrElse {
-        val promise = Promise[Seq[WhatsRunningWhere]]()
+        val promise = Promise[A]()
         inFlight = Some(promise.future)
         Try(load).fold(Future.failed, identity).onComplete { result =>
           synchronized {

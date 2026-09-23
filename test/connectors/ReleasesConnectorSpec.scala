@@ -84,7 +84,7 @@ class ReleasesConnectorSpec extends SpecBase with HttpClientV2Support with WireM
   "Deployment snapshot cache" - {
     "share an in-flight fetch and expire successful data after its TTL" in {
       var now = 0L
-      val cache = new WhatsRunningWhereCache(60.seconds, () => now)
+      val cache = new SnapshotCache[Seq[WhatsRunningWhere]](60.seconds, () => now)
       val pending = Promise[Seq[WhatsRunningWhere]]()
       var calls = 0
       def load() = { calls += 1; pending.future }
@@ -105,7 +105,7 @@ class ReleasesConnectorSpec extends SpecBase with HttpClientV2Support with WireM
     }
 
     "allow zero TTL without retaining a completed snapshot" in {
-      val cache = new WhatsRunningWhereCache(Duration.Zero)
+      val cache = new SnapshotCache[Seq[WhatsRunningWhere]](Duration.Zero)
       cache.get(Future.successful(Seq(expected))).futureValue mustBe Seq(expected)
       cache.get(Future.successful(Seq.empty)).futureValue mustBe empty
     }

@@ -45,7 +45,7 @@ trait IntegrationSpec extends AnyFreeSpec with Matchers with OptionValues with S
   protected def useVulnerabilityStub: Boolean = false
 
   override def fakeApplication(): Application = {
-    val upstreams = Seq("internal-auth", "catalogue-config", "vulnerabilities", "releases-api").flatMap { service =>
+    val upstreams = Seq("internal-auth", "catalogue-config", "vulnerabilities", "releases-api", "teams-and-repositories").flatMap { service =>
       Seq(
         s"microservice.services.$service.host" -> wireMockHost,
         s"microservice.services.$service.port" -> wireMockPort
@@ -62,6 +62,9 @@ trait IntegrationSpec extends AnyFreeSpec with Matchers with OptionValues with S
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()
+    stubFor(get(urlEqualTo("/api/v2/teams")).willReturn(okJson(fixture("directory-teams").toString)))
+    stubFor(get(urlEqualTo("/api/v2/repositories?repoType=Service")).willReturn(okJson(fixture("directory-services").toString)))
+    stubFor(get(urlEqualTo("/api/v2/digital-services")).willReturn(okJson(fixture("directory-digital-services").toString)))
     stubFor(get(urlEqualTo("/catalogue-config/menu")).willReturn(okJson(fixture("catalogue-menu").toString)))
     stubFor(get(urlEqualTo("/catalogue-config/search-index")).willReturn(okJson("[]")))
   }
