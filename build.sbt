@@ -14,7 +14,7 @@ lazy val microservice = (project in file("."))
   .settings(ThisBuild / useSuperShell := false)
   .settings(
     name := appName,
-    PlayKeys.playDefaultPort := 9000,
+    PlayKeys.playDefaultPort := 8865,
     ScoverageKeys.coverageExcludedFiles := "<empty>;Reverse.*;.*Routes.*;.*views.html.*;",
     ScoverageKeys.coverageMinimumStmtTotal := 78,
     ScoverageKeys.coverageFailOnMinimum := true,
