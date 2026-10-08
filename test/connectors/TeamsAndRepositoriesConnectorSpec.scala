@@ -26,21 +26,20 @@ import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration.*
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class TeamsAndRepositoriesConnectorSpec extends SpecBase with HttpClientV2Support with WireMockSupport {
-  private implicit val hc: HeaderCarrier = HeaderCarrier()
-  private val teams = "/api/v2/teams"
-  private val services = "/api/v2/repositories?repoType=Service"
+class TeamsAndRepositoriesConnectorSpec extends SpecBase with HttpClientV2Support with WireMockSupport:
+  private given HeaderCarrier = HeaderCarrier()
+  private val teams           = "/api/v2/teams"
+  private val services        = "/api/v2/repositories?repoType=Service"
   private val digitalServices = "/api/v2/digital-services"
 
-  private def connector(): TeamsAndRepositoriesConnector = {
+  private def connector(): TeamsAndRepositoriesConnector =
     val config = Configuration.from(Map(
       "microservice.services.teams-and-repositories.protocol" -> "http",
-      "microservice.services.teams-and-repositories.host" -> wireMockHost,
-      "microservice.services.teams-and-repositories.port" -> wireMockPort,
-      "teams-and-repositories.cache-ttl" -> "1 hour"
+      "microservice.services.teams-and-repositories.host"     -> wireMockHost,
+      "microservice.services.teams-and-repositories.port"     -> wireMockPort,
+      "teams-and-repositories.cache-ttl"                      -> "1 hour"
     ))
     new TeamsAndRepositoriesConnector(httpClientV2, new ServicesConfig(config), config)
-  }
 
   private def stubDirectory(): Unit = {
     stubFor(get(urlEqualTo(teams)).willReturn(okJson("""[{"name":"Zulu"},{"name":"Alpha"},{"name":"Alpha"}]""")))
@@ -48,8 +47,8 @@ class TeamsAndRepositoriesConnectorSpec extends SpecBase with HttpClientV2Suppor
     stubFor(get(urlEqualTo(digitalServices)).willReturn(okJson("""["Payments","Accounts"]""")))
   }
 
-  "Teams and repositories directory" - {
-    "decode the API contracts, sort options and share one snapshot across concurrent requests" in {
+  "Teams and repositories directory" should:
+    "decode the API contracts, sort options and share one snapshot across concurrent requests" in:
       stubDirectory()
       val client = connector()
       val results = Future.sequence(Seq.fill(5)(client.getDirectory())).futureValue
@@ -62,9 +61,8 @@ class TeamsAndRepositoriesConnectorSpec extends SpecBase with HttpClientV2Suppor
       }
       client.getDirectory().futureValue mustBe results.head
       Seq(teams, services, digitalServices).foreach(path => verify(1, getRequestedFor(urlEqualTo(path))))
-    }
 
-    "retry failed and malformed snapshots without retaining a partial directory" in {
+    "retry failed and malformed snapshots without retaining a partial directory" in:
       stubDirectory()
       val client = connector()
       stubFor(get(urlEqualTo(digitalServices)).willReturn(serverError()))
@@ -74,9 +72,8 @@ class TeamsAndRepositoriesConnectorSpec extends SpecBase with HttpClientV2Suppor
       stubDirectory()
       client.getDirectory().futureValue.services mustBe Seq("a", "b")
       Seq(teams, services, digitalServices).foreach(path => verify(3, getRequestedFor(urlEqualTo(path))))
-    }
 
-    "expire the directory one hour after a successful fetch completes" in {
+    "expire the directory one hour after a successful fetch completes" in:
       var now = 0L
       val cache = new SnapshotCache[String](1.hour, () => now)
       val pending = Promise[String]()
@@ -88,6 +85,3 @@ class TeamsAndRepositoriesConnectorSpec extends SpecBase with HttpClientV2Suppor
       cache.get(Future.successful("replacement")).futureValue mustBe "original"
       now += 1
       cache.get(Future.successful("replacement")).futureValue mustBe "replacement"
-    }
-  }
-}

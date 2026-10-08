@@ -24,28 +24,26 @@ import play.api.libs.ws.DefaultBodyReadables.*
 import play.api.libs.ws.DefaultBodyWritables.*
 import support.IntegrationSpec
 
-class GuidanceISpec extends IntegrationSpec {
-  private def editPath = s"$detailPath/guidance/edit"
-  private def savePath = s"$detailPath/guidance"
+class GuidanceISpec extends IntegrationSpec:
+  private def editPath   = s"$detailPath/guidance/edit"
+  private def savePath   = s"$detailPath/guidance"
   private def deletePath = s"$detailPath/guidance/delete"
-  private def upstream = s"/vulnerabilities/api/v2/vulnerabilities/$vulnerabilityId/guidance"
+  private def upstream   = s"/vulnerabilities/api/v2/vulnerabilities/$vulnerabilityId/guidance"
 
-  private def stubEditor(): Unit = {
+  private def stubEditor(): Unit =
     authorise(canManageGuidance = true)
     stubVulnerability()
-    stubFor(get(urlEqualTo(advisoryPath.replace("=true", "=false"))).willReturn(okJson(fixture("vulnerability").toString)))
-  }
+    stubFor(get(urlEqualTo(advisoryPath.replace("includeOccurrenceSummary=true&includeOccurrenceDetails=true", "includeOccurrenceSummary=false&includeOccurrenceDetails=false"))).willReturn(okJson(fixture("vulnerability").toString)))
 
-  private def submit(form: WSResponse, path: String, fields: Map[String, String], csrf: Boolean = true): WSResponse = {
+  private def submit(form: WSResponse, path: String, fields: Map[String, String], csrf: Boolean = true): WSResponse =
     val token = Jsoup.parse(form.body[String]).select("input[name=csrfToken]").attr("value")
     token must not be empty
-    val data = if (csrf) fields + ("csrfToken" -> token) else fields
+    val data = if csrf then fields + ("csrfToken" -> token) else fields
     app.injector.instanceOf[WSClient].url(s"http://localhost:$port$path").withFollowRedirects(false)
       .withCookies(form.cookies.toList*).post(data.view.mapValues(Seq(_)).toMap).futureValue
-  }
 
-  "Guidance editing over HTTP" - {
-    "hide editing from readers and deny direct form access before calling the backend" in {
+  "Guidance editing over HTTP" should:
+    "hide editing from readers and deny direct form access before calling the backend" in:
       authorise()
       stubVulnerability()
       val detail = request().get().futureValue
@@ -53,11 +51,10 @@ class GuidanceISpec extends IntegrationSpec {
       Jsoup.parse(detail.body[String]).select(s"a[href='$editPath']").isEmpty mustBe true
       request(editPath).get().futureValue.status mustBe FORBIDDEN
       request(deletePath).get().futureValue.status mustBe FORBIDDEN
-      verify(0, getRequestedFor(urlEqualTo(advisoryPath.replace("=true", "=false"))))
+      verify(0, getRequestedFor(urlEqualTo(advisoryPath.replace("includeOccurrenceSummary=true&includeOccurrenceDetails=true", "includeOccurrenceSummary=false&includeOccurrenceDetails=false"))))
       verify(0, putRequestedFor(urlEqualTo(upstream)))
-    }
 
-    "publish guidance with CSRF protection and the IA author, ignoring a browser-supplied author" in {
+    "publish guidance with CSRF protection and the IA author, ignoring a browser-supplied author" in:
       stubEditor()
       stubFor(put(urlEqualTo(upstream)).willReturn(noContent()))
       val detail = request().get().futureValue
@@ -71,9 +68,8 @@ class GuidanceISpec extends IntegrationSpec {
       verify(putRequestedFor(urlEqualTo(upstream)).withHeader("Authorization", equalTo(token))
         .withRequestBody(equalToJson("""{"guidance":"Updated advice","comment":"Private reason","author":"integration-user"}""")))
       verify(postRequestedFor(urlEqualTo(authPath)).withRequestBody(containing("WRITE")).withRequestBody(containing("username")))
-    }
 
-    "remove guidance through PUT with null and retain the private reason and IA author" in {
+    "remove guidance through PUT with null and retain the private reason and IA author" in:
       stubEditor()
       stubFor(put(urlEqualTo(upstream)).willReturn(noContent()))
       val form = request(deletePath).get().futureValue
@@ -82,18 +78,16 @@ class GuidanceISpec extends IntegrationSpec {
       response.status mustBe SEE_OTHER
       verify(putRequestedFor(urlEqualTo(upstream))
         .withRequestBody(equalToJson("""{"guidance":null,"comment":"No longer applicable","author":"integration-user"}""")))
-    }
 
-    "reject missing CSRF tokens and revoked write permission without mutating guidance" in {
+    "reject missing CSRF tokens and revoked write permission without mutating guidance" in:
       stubEditor()
       val form = request(editPath).get().futureValue
       submit(form, savePath, Map("guidance" -> "Advice", "comment" -> "Reason"), csrf = false).status mustBe FORBIDDEN
       authorise(canManageGuidance = false)
       submit(form, savePath, Map("guidance" -> "Advice", "comment" -> "Reason")).status mustBe FORBIDDEN
       verify(0, putRequestedFor(urlEqualTo(upstream)))
-    }
 
-    "retain valid input and show validation errors without a backend write" in {
+    "retain valid input and show validation errors without a backend write" in:
       stubEditor()
       val form = request(editPath).get().futureValue
       val response = submit(form, savePath, Map("guidance" -> "Retain this advice", "comment" -> " "))
@@ -102,20 +96,15 @@ class GuidanceISpec extends IntegrationSpec {
       page.select("textarea[name=guidance]").text() mustBe "Retain this advice"
       page.select("#comment-error").text() must include("Enter a reason")
       verify(0, putRequestedFor(urlEqualTo(upstream)))
-    }
 
-    "handle backend rejection and failure without a success redirect" in {
+    "handle backend rejection and failure without a success redirect" in:
       stubEditor()
       val form = request(editPath).get().futureValue
-      Seq(400 -> BAD_REQUEST, 403 -> FORBIDDEN, 404 -> NOT_FOUND, 500 -> BAD_GATEWAY).foreach { case (upstreamStatus, expected) =>
-        stubFor(put(urlEqualTo(upstream)).willReturn(aResponse().withStatus(upstreamStatus)))
-        val response = submit(form, savePath, Map("guidance" -> "Retain advice", "comment" -> "Reason"))
-        response.status mustBe expected
-        response.header("Location") mustBe None
-        if (expected != NOT_FOUND) {
-          Jsoup.parse(response.body[String]).select("textarea[name=guidance]").text() mustBe "Retain advice"
-        }
-      }
-    }
-  }
-}
+      Seq(400 -> BAD_REQUEST, 403 -> FORBIDDEN, 404 -> NOT_FOUND, 500 -> BAD_GATEWAY).foreach:
+        case (upstreamStatus, expected) =>
+          stubFor(put(urlEqualTo(upstream)).willReturn(aResponse().withStatus(upstreamStatus)))
+          val response = submit(form, savePath, Map("guidance" -> "Retain advice", "comment" -> "Reason"))
+          response.status mustBe expected
+          response.header("Location") mustBe None
+          if expected != NOT_FOUND then 
+            Jsoup.parse(response.body[String]).select("textarea[name=guidance]").text() mustBe "Retain advice"

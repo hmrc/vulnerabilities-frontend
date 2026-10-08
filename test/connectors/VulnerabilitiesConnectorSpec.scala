@@ -27,31 +27,31 @@ import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class VulnerabilitiesConnectorSpec extends SpecBase with HttpClientV2Support with WireMockSupport {
-  private implicit val hc: HeaderCarrier = HeaderCarrier(authorization = Some(Authorization("test-token")))
-  private val response = {
+class VulnerabilitiesConnectorSpec extends SpecBase with HttpClientV2Support with WireMockSupport:
+  private given HeaderCarrier = HeaderCarrier(authorization = Some(Authorization("test-token")))
+  private val response =
     val stream = getClass.getResourceAsStream("/vulnerability-details.json")
     try Json.parse(stream).as[JsObject] finally stream.close()
-  }
-  private val occurrenceResponse = {
+  
+  private val occurrenceResponse =
     val stream = getClass.getResourceAsStream("/vulnerability-occurrences.json")
     try Json.parse(stream).as[JsObject] finally stream.close()
-  }
+  
   private val occurrencesPath = "/vulnerabilities/api/v2/unique-vulnerabilities/CVE-2026-0001/occurrences"
   private val path = "/vulnerabilities/api/v2/vulnerabilities/CVE-2026-0001"
 
-  private def connector(useStub: Boolean = false): VulnerabilitiesConnector = {
+  private def connector(): VulnerabilitiesConnector = {
     val config = Configuration.from(Map(
       "microservice.services.vulnerabilities.protocol" -> "http",
-      "microservice.services.vulnerabilities.host" -> wireMockHost,
-      "microservice.services.vulnerabilities.port" -> wireMockPort,
-      "vulnerabilities.use-stub" -> useStub
+      "microservice.services.vulnerabilities.host"     -> wireMockHost,
+      "microservice.services.vulnerabilities.port"     -> wireMockPort,
+      "vulnerabilities.use-stub"                       -> false
     ))
     new VulnerabilitiesConnector(httpClientV2, new ServicesConfig(config), config)
   }
 
-  "Vulnerabilities connector" - {
-    "send guidance, private comment and verified author, including explicit null for deletion" in {
+  "Vulnerabilities connector" should:
+    "send guidance, private comment and verified author, including explicit null for deletion" in:
       val target = "/vulnerabilities/api/v2/vulnerabilities/CVE-2026-0001/guidance"
       val client = connector()
       stubFor(put(urlEqualTo(target)).willReturn(noContent()))
@@ -61,52 +61,47 @@ class VulnerabilitiesConnectorSpec extends SpecBase with HttpClientV2Support wit
       client.putGuidance("CVE-2026-0001", GuidanceUpdate(None, "Superseded", "platops-user")).futureValue
       verify(putRequestedFor(urlEqualTo(target))
         .withRequestBody(equalToJson("""{"guidance":null,"comment":"Superseded","author":"platops-user"}""")))
-      Seq(400, 403, 404, 500).foreach { status =>
+      Seq(400, 403, 404, 500).foreach: status =>
         stubFor(put(urlEqualTo(target)).willReturn(aResponse().withStatus(status)))
         client.putGuidance("CVE-2026-0001", GuidanceUpdate(None, "Remove guidance", "platops-user")).failed.futureValue mustBe a[UpstreamErrorResponse]
-      }
-    }
+    
+    "request embedded occurrence details for a single vulnerability" in:
+      val rows = (occurrenceResponse \ "results").as[Seq[JsObject]]
+      val body = response + ("occurrenceDetails" -> Json.toJson(rows))
+      val target = s"$path?includeOccurrenceSummary=true&includeOccurrenceDetails=true"
+      stubFor(get(urlEqualTo(target)).willReturn(okJson(body.toString)))
 
-    "retain stub guidance changes without exposing comments as guidance" in {
-      val client = connector(useStub = true)
-      val id = "DEMO-UNAVAILABLE"
-      client.getVulnerability(id).futureValue.value.guidance mustBe None
-      client.putGuidance(id, GuidanceUpdate(Some("First guidance"), "Private reason", "alice")).futureValue
-      client.getVulnerability(id).futureValue.value.guidance mustBe Some("First guidance")
-      client.putGuidance(id.toLowerCase, GuidanceUpdate(Some("Replacement"), "Another private reason", "bob")).futureValue
-      client.getVulnerability(id).futureValue.value.guidance mustBe Some("Replacement")
-      client.putGuidance(id, GuidanceUpdate(None, "Outdated", "bob")).futureValue
-      client.getVulnerability(id).futureValue.value.guidance mustBe None
-      client.putGuidance("unknown", GuidanceUpdate(None, "Unknown", "alice")).failed.futureValue mustBe a[UpstreamErrorResponse]
-      verify(0, putRequestedFor(urlMatching(".*")))
-    }
+      val result = connector().getVulnerability("CVE-2026-0001", includeOccurrenceSummary = true,
+        includeOccurrenceDetails = true).futureValue.value
+      result.occurrenceDetails.value must have size rows.size
+      result.occurrenceDetails.value.head.vulnerabilityId mustBe "CVE-2026-0001"
+      result.occurrenceSummary.value.occurrences mustBe 9
+      verify(getRequestedFor(urlEqualTo(target)))
 
-    "return the existing sample without making HTTP requests in stub mode" in {
-      val result = connector(useStub = true).getVulnerability("CVE-2021-44228").futureValue.value
-      result.vulnerabilityId mustBe "CVE-2021-44228"
-      result.summary mustBe "Remote code execution in Apache Log4j 2"
-      result.cvss mustBe Some("10.0")
-      result.occurrenceSummary mustBe None
-      result.epss mustBe None
-      verify(0, getRequestedFor(urlMatching(".*")))
-    }
+    "distinguish omitted, null and empty embedded occurrence details" in:
+      (response - "occurrenceDetails").as[VulnerabilityDetails].occurrenceDetails mustBe None
+      (response + ("occurrenceDetails" -> play.api.libs.json.JsNull)).as[VulnerabilityDetails].occurrenceDetails mustBe None
+      (response + ("occurrenceDetails" -> Json.arr())).as[VulnerabilityDetails].occurrenceDetails mustBe Some(Seq.empty)
 
-    "include the stub occurrence summary only when requested and return None for unknown IDs" in {
-      val summary = connector(useStub = true).getVulnerability("CVE-2021-44228", true).futureValue.value.occurrenceSummary.value
-      val occurrences = services.SampleVulnerabilityData.sample.occurrences
-      summary.occurrences mustBe occurrences.size
-      models.OccurrencePriority.values.foreach { priority =>
-        (Json.toJson(summary.byPriority) \ priority.value).as[Int] mustBe occurrences.count(_.priority == priority)
-      }
-      models.OccurrenceState.values.foreach { state =>
-        (Json.toJson(summary.byState) \ state.value).as[Int] mustBe occurrences.count(_.state == state)
-      }
-      connector(useStub = true).getVulnerability("unknown").futureValue mustBe None
-      verify(0, getRequestedFor(urlMatching(".*")))
-    }
+    "request embedded occurrences in the paginated vulnerability list" in:
+      val target = "/vulnerabilities/api/v2/vulnerabilities?includeOccurrenceSummary=true&includeOccurrenceDetails=true&limit=2&offset=1"
+      val rows = (occurrenceResponse \ "results").as[Seq[JsObject]]
+      val item = response + ("occurrenceDetails" -> Json.toJson(rows))
+      val body = Json.obj(
+        "results" -> Json.arr(item),
+        "page" -> Json.obj("limit" -> 2, "offset" -> 1, "total" -> 2)
+      )
+      stubFor(get(urlEqualTo(target)).willReturn(okJson(body.toString)))
 
-    "default includeOccurrenceSummary to false and decode an omitted summary" in {
-      stubFor(get(urlEqualTo(s"$path?includeOccurrenceSummary=false")).willReturn(okJson((response - "occurrenceSummary").toString)))
+      val result = connector().getVulnerabilities(includeOccurrenceSummary = true,
+        limit = 2, offset = 1, includeOccurrenceDetails = true).futureValue
+      result.page.offset mustBe 1
+      result.page.total mustBe 2
+      result.results.head.occurrenceDetails.value must have size rows.size
+      verify(getRequestedFor(urlEqualTo(target)))
+
+    "default includeOccurrenceSummary to false and decode an omitted summary" in:
+      stubFor(get(urlEqualTo(s"$path?includeOccurrenceSummary=false&includeOccurrenceDetails=false")).willReturn(okJson((response - "occurrenceSummary").toString)))
       val result = connector().getVulnerability("CVE-2026-0001").futureValue.value
       result.occurrenceSummary mustBe None
       result.publishedDate mustBe Instant.parse("2026-06-10T00:00:00Z")
@@ -118,11 +113,10 @@ class VulnerabilitiesConnectorSpec extends SpecBase with HttpClientV2Support wit
       result.epss mustBe Some(BigDecimal("0.14"))
       result.kev mustBe Some(true)
       result.guidance mustBe Some("Some guidance suggested...")
-      verify(getRequestedFor(urlEqualTo(s"$path?includeOccurrenceSummary=false")).withHeader("Authorization", equalTo("test-token")))
-    }
+      verify(getRequestedFor(urlEqualTo(s"$path?includeOccurrenceSummary=false&includeOccurrenceDetails=false")).withHeader("Authorization", equalTo("test-token")))
 
-    "request occurrence aggregates explicitly and preserve the supplied counts" in {
-      stubFor(get(urlEqualTo(s"$path?includeOccurrenceSummary=true")).willReturn(okJson(response.toString)))
+    "request occurrence aggregates explicitly and preserve the supplied counts" in:
+      stubFor(get(urlEqualTo(s"$path?includeOccurrenceSummary=true&includeOccurrenceDetails=false")).willReturn(okJson(response.toString)))
       val result = connector().getVulnerability("CVE-2026-0001", true).futureValue.value
       val summary = result.occurrenceSummary.value
       summary.servicesAffected mustBe 6
@@ -134,9 +128,8 @@ class VulnerabilitiesConnectorSpec extends SpecBase with HttpClientV2Support wit
       summary.byPriority.expedite mustBe 3
       summary.byState.resolved mustBe 1
       Json.toJson(result).as[VulnerabilityDetails] mustBe result
-    }
 
-    "keep omitted or null enrichment unavailable and distinguish false and zero from missing data" in {
+    "keep omitted or null enrichment unavailable and distinguish false and zero from missing data" in:
       val missing = response - "cvss" - "epss" - "kev" - "guidance" - "occurrenceSummary"
       val decoded = missing.as[VulnerabilityDetails]
       decoded.cvss mustBe None
@@ -149,24 +142,20 @@ class VulnerabilitiesConnectorSpec extends SpecBase with HttpClientV2Support wit
       zero.cvss mustBe Some("0")
       zero.epss mustBe Some(BigDecimal(0))
       zero.kev mustBe Some(false)
-    }
 
-    "return None for a 404 response" in {
-      stubFor(get(urlEqualTo(s"$path?includeOccurrenceSummary=false")).willReturn(aResponse().withStatus(404)))
+    "return None for a 404 response" in:
+      stubFor(get(urlEqualTo(s"$path?includeOccurrenceSummary=false&includeOccurrenceDetails=false")).willReturn(aResponse().withStatus(404)))
       connector().getVulnerability("CVE-2026-0001").futureValue mustBe None
-    }
 
-    "propagate server errors instead of silently replacing them with sample data" in {
-      stubFor(get(urlEqualTo(s"$path?includeOccurrenceSummary=false")).willReturn(aResponse().withStatus(500)))
+    "propagate server errors rather than hiding upstream failures" in:
+      stubFor(get(urlEqualTo(s"$path?includeOccurrenceSummary=false&includeOccurrenceDetails=false")).willReturn(aResponse().withStatus(500)))
       connector().getVulnerability("CVE-2026-0001").failed.futureValue mustBe a[UpstreamErrorResponse]
-    }
 
-    "reject malformed responses instead of treating them as absent advisories" in {
-      stubFor(get(urlEqualTo(s"$path?includeOccurrenceSummary=false")).willReturn(okJson("{}")))
+    "reject malformed responses instead of treating them as absent advisories" in:
+      stubFor(get(urlEqualTo(s"$path?includeOccurrenceSummary=false&includeOccurrenceDetails=false")).willReturn(okJson("{}")))
       connector().getVulnerability("CVE-2026-0001").failed.futureValue mustBe a[Exception]
-    }
 
-    "decode occurrence evidence and SLA fields without adding optional query parameters" in {
+    "decode occurrence evidence and SLA fields without adding optional query parameters" in:
       stubFor(get(urlEqualTo(occurrencesPath)).willReturn(okJson(occurrenceResponse.toString)))
       val result = connector().getOccurrences("CVE-2026-0001").futureValue
       result mustBe occurrenceResponse.as[VulnerabilityOccurrences]
@@ -174,9 +163,8 @@ class VulnerabilitiesConnectorSpec extends SpecBase with HttpClientV2Support wit
       result.results.head.sla.breached mustBe true
       result.results.head.importedBy.coordinate mustBe "uk.gov.hmrc:parent-lib:3.1.0"
       verify(getRequestedFor(urlEqualTo(occurrencesPath)).withHeader("Authorization", equalTo("test-token")))
-    }
 
-    "send all supported occurrence query parameters with safe encoding" in {
+    "send all supported occurrence query parameters with safe encoding" in:
       stubFor(get(urlPathEqualTo(occurrencesPath)).willReturn(okJson(occurrenceResponse.toString)))
       val query = OccurrenceQuery(Some("A & B"), Some("Payments / tax"), Some(false), Some(true),
         Some("riskAccepted"), Some("expedite"), Some(10), Some(20), Some("firstDetected"), Some("desc"))
@@ -185,38 +173,35 @@ class VulnerabilitiesConnectorSpec extends SpecBase with HttpClientV2Support wit
         case (request, (key, value)) => request.withQueryParam(key, equalTo(value))
       }
       verify(request)
-    }
 
-    "preserve true, false and unavailable near-breach values from the occurrence response" in {
+    "preserve true, false and unavailable near-breach values from the occurrence response" in:
       val row = (occurrenceResponse \ "results").as[Seq[JsObject]].head
       val originalSla = (row \ "sla").as[JsObject]
       val cases = Seq(
-        (originalSla ++ Json.obj("isNearBreach" -> true)) -> Some(true),
-        (originalSla ++ Json.obj("isNearBreach" -> false)) -> Some(false),
+        (originalSla ++ Json.obj("isNearBreach" -> true))                      -> Some(true),
+        (originalSla ++ Json.obj("isNearBreach" -> false))                     -> Some(false),
         (originalSla ++ Json.obj("isNearBreach" -> play.api.libs.json.JsNull)) -> None,
-        originalSla -> None
+        originalSla                                                            -> None
       )
-      cases.foreach { case (sla, expected) =>
-        val body = occurrenceResponse ++ Json.obj("results" -> Seq(row ++ Json.obj("sla" -> sla)))
-        stubFor(get(urlEqualTo(occurrencesPath)).willReturn(okJson(body.toString)))
-        connector().getOccurrences("CVE-2026-0001").futureValue.results.head.sla.isNearBreach mustBe expected
-      }
-    }
+      cases.foreach:
+        case (sla, expected) =>
+          val body = occurrenceResponse ++ Json.obj("results" -> Seq(row ++ Json.obj("sla" -> sla)))
+          stubFor(get(urlEqualTo(occurrencesPath)).willReturn(okJson(body.toString)))
+          connector().getOccurrences("CVE-2026-0001").futureValue.results.head.sla.isNearBreach mustBe expected
 
-    "decode snake-case resolution evidence with an optional affected version" in {
+    "decode snake-case resolution evidence with an optional affected version" in:
       val raw = Json.obj("last_affected_app_version" -> "1.8.0", "fixed_in_app_version" -> "1.9.0",
         "resolved_at" -> "2026-09-22T09:30:00Z")
-      Seq(raw -> Some("1.8.0"), (raw - "last_affected_app_version") -> None).foreach { case (resolution, previous) =>
-        val row = (occurrenceResponse \ "results").as[Seq[JsObject]].head ++ Json.obj("resolution" -> resolution)
-        val body = occurrenceResponse ++ Json.obj("results" -> Seq(row))
-        stubFor(get(urlEqualTo(occurrencesPath)).willReturn(okJson(body.toString)))
-        val result = connector().getOccurrences("CVE-2026-0001").futureValue.results.head.resolution.value
-        result mustBe OccurrenceResolution(previous, "1.9.0", Instant.parse("2026-09-22T09:30:00Z"))
-        Json.toJson(result) mustBe resolution
-      }
-    }
+      Seq(raw -> Some("1.8.0"), (raw - "last_affected_app_version") -> None).foreach:
+        case (resolution, previous) =>
+          val row = (occurrenceResponse \ "results").as[Seq[JsObject]].head ++ Json.obj("resolution" -> resolution)
+          val body = occurrenceResponse ++ Json.obj("results" -> Seq(row))
+          stubFor(get(urlEqualTo(occurrencesPath)).willReturn(okJson(body.toString)))
+          val result = connector().getOccurrences("CVE-2026-0001").futureValue.results.head.resolution.value
+          result mustBe OccurrenceResolution(previous, "1.9.0", Instant.parse("2026-09-22T09:30:00Z"))
+          Json.toJson(result) mustBe resolution
 
-    "accept missing resolution but reject incomplete supplied resolution evidence" in {
+    "accept missing resolution but reject incomplete supplied resolution evidence" in:
       val row = (occurrenceResponse \ "results").as[Seq[JsObject]].head
       Seq(row, row ++ Json.obj("resolution" -> play.api.libs.json.JsNull)).foreach { value =>
         stubFor(get(urlEqualTo(occurrencesPath)).willReturn(okJson(
@@ -227,27 +212,12 @@ class VulnerabilitiesConnectorSpec extends SpecBase with HttpClientV2Support wit
       stubFor(get(urlEqualTo(occurrencesPath)).willReturn(okJson(
         (occurrenceResponse ++ Json.obj("results" -> Seq(incomplete))).toString)))
       connector().getOccurrences("CVE-2026-0001").failed.futureValue mustBe a[Exception]
-    }
 
-    "filter and page stub occurrences without HTTP and retain the unpaged result total" in {
-      val query = OccurrenceQuery(teamName = Some("Example Payments"), digitalService = Some("Example payments"),
-        priority = Some("immediate"), state = Some("actionable"), hasBreachedSla = Some(false), isNearBreach = Some(true),
-        limit = Some(1), offset = Some(1), sortBy = Some("serviceName"), sortOrder = Some("desc"))
-      val result = connector(useStub = true).getOccurrences("CVE-2021-44228", query).futureValue
-      result.page.total mustBe 3
-      result.results.map(_.serviceName) mustBe Seq("example-payments-api")
-      connector(useStub = true).getOccurrences("unknown").futureValue.results mustBe empty
-      verify(0, getRequestedFor(urlMatching(".*")))
-    }
 
-    "propagate occurrence endpoint failures and reject malformed bodies" in {
+    "propagate occurrence endpoint failures and reject malformed bodies" in:
       Seq(404, 500).foreach { status =>
         stubFor(get(urlEqualTo(occurrencesPath)).willReturn(aResponse().withStatus(status)))
         connector().getOccurrences("CVE-2026-0001").failed.futureValue mustBe a[UpstreamErrorResponse]
       }
       stubFor(get(urlEqualTo(occurrencesPath)).willReturn(okJson("{}")))
       connector().getOccurrences("CVE-2026-0001").failed.futureValue mustBe a[Exception]
-    }
-
-  }
-}

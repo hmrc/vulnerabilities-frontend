@@ -23,6 +23,9 @@ lazy val microservice = (project in file("."))
       "-feature",
       "-Wconf:cat=deprecation:w,cat=feature:w,src=target/.*:s"
     ),
+    TwirlKeys.templateImports ++= Seq(
+      "views.html.helper.CSPNonce"
+    ),
     libraryDependencies ++= AppDependencies(),
     retrieveManaged := true,
     pipelineStages := Seq(digest)

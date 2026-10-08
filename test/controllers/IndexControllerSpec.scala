@@ -20,22 +20,18 @@ import base.SpecBase
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
-class IndexControllerSpec extends SpecBase {
+class IndexControllerSpec extends SpecBase:
 
-  "Index Controller" - {
+  "Index Controller" should:
 
-    "must redirect to the sample vulnerability" in {
+    "must redirect to the configured landing vulnerability" in:
 
       val application = applicationBuilder().build()
 
-      running(application) {
+      running(application):
         val request = FakeRequest(GET, routes.IndexController.onPageLoad().url)
 
         val result = route(application, request).value
 
         status(result) mustEqual SEE_OTHER
         redirectLocation(result).value mustEqual routes.VulnerabilityController.show("CVE-2021-44228").url
-      }
-    }
-  }
-}

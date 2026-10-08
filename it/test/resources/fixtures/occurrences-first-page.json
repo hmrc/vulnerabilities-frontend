@@ -1,6 +1,7 @@
 {
   "results": [
     {
+      "occurrenceId": "OCC-12345",
       "vulnerabilityId": "CVE-2099-1234",
       "serviceName": "integration-alpha",
       "appVersion": "1.2.3",
@@ -31,6 +32,7 @@
       "firstDetected": "2026-06-14T09:30:00Z"
     },
     {
+      "occurrenceId": "OCC-12346",
       "vulnerabilityId": "CVE-2099-1234",
       "serviceName": "integration-beta",
       "appVersion": "2.0.0",

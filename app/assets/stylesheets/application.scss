@@ -8,4 +8,53 @@
   section[id] { scroll-margin-top: 1rem; }
   a:focus-visible, summary:focus-visible { outline: 3px solid #ffdd00; outline-offset: 2px; }
   .guidance-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+  .vulnerability-summary {
+    list-style: none;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .vulnerability-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .vulnerability-summary::before {
+    content: "▶";
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    transition: transform 0.1s ease-in-out;
+  }
+
+  details[open] .vulnerability-summary::before {
+    transform: translateY(-50%) rotate(90deg);
+  }
+
+  .affected-teams-list {
+    padding-top: 0.5rem;
+    padding-left: 2rem;
+  }
+
+  .affected-teams-scroll {
+    max-height: 260px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .affected-teams-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 2rem;
+  }
+
+  .affected-team {
+    margin-bottom: 0.5rem;
+  }
+
+  .vulnerability-summary .vulnerability-id {
+    padding-left: 2rem;
+  }
 }

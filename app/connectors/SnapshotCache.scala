@@ -20,25 +20,19 @@ import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
-private[connectors] class SnapshotCache[A](ttl: FiniteDuration, nanoTime: () => Long = () => System.nanoTime()) {
+private[connectors] class SnapshotCache[A](ttl: FiniteDuration, nanoTime: () => Long = () => System.nanoTime()):
   private var cached: Option[(Long, A)] = None
   private var inFlight: Option[Future[A]] = None
 
-  def get(load: => Future[A])(implicit ec: ExecutionContext): Future[A] = synchronized {
-    cached.filter { case (loadedAt, _) => nanoTime() - loadedAt < ttl.toNanos } match {
+  def get(load: => Future[A])(using ExecutionContext): Future[A] = synchronized:
+    cached.filter { case (loadedAt, _) => nanoTime() - loadedAt < ttl.toNanos } match
       case Some((_, values)) => Future.successful(values)
-      case None => inFlight.getOrElse {
+      case None              => inFlight.getOrElse:
         val promise = Promise[A]()
         inFlight = Some(promise.future)
-        Try(load).fold(Future.failed, identity).onComplete { result =>
-          synchronized {
-            cached = result.toOption.map(values => nanoTime() -> values)
+        Try(load).fold(Future.failed, identity).onComplete: result =>
+          synchronized:
+            cached   = result.toOption.map(values => nanoTime() -> values)
             inFlight = None
             promise.complete(result)
-          }
-        }
         promise.future
-      }
-    }
-  }
-}

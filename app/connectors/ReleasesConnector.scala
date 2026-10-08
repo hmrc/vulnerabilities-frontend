@@ -32,22 +32,19 @@ class ReleasesConnector @Inject() (
   httpClient: HttpClientV2,
   servicesConfig: ServicesConfig,
   configuration: Configuration
-)(implicit ec: ExecutionContext) {
+)(using ExecutionContext):
   private val baseUrl = servicesConfig.baseUrl("releases-api")
   private val useStub = configuration.get[Boolean]("releases-api.use-stub")
-  private val cache = new SnapshotCache[Seq[WhatsRunningWhere]](configuration.get[FiniteDuration]("releases-api.cache-ttl"))
+  private val cache   = new SnapshotCache[Seq[WhatsRunningWhere]](configuration.get[FiniteDuration]("releases-api.cache-ttl"))
 
-  def getWhatsRunningWhere()(implicit hc: HeaderCarrier): Future[Seq[WhatsRunningWhere]] =
-    if (useStub) {
+  def getWhatsRunningWhere()(using HeaderCarrier): Future[Seq[WhatsRunningWhere]] =
+    if useStub then
       Future.successful(SampleReleasesData.services)
-    } else {
+    else
       cache.get(httpClient.get(url"$baseUrl/releases-api/whats-running-where").execute[Seq[WhatsRunningWhere]])
-    }
 
-  def getWhatsRunningWhereForService(serviceName: String)(implicit hc: HeaderCarrier): Future[Option[WhatsRunningWhere]] =
-    if (useStub) {
+  def getWhatsRunningWhereForService(serviceName: String)(using HeaderCarrier): Future[Option[WhatsRunningWhere]] =
+    if useStub then
       Future.successful(SampleReleasesData.services.find(_.serviceName == serviceName))
-    } else {
+    else
       httpClient.get(url"$baseUrl/releases-api/whats-running-where/$serviceName").execute[Option[WhatsRunningWhere]]
-    }
-}
