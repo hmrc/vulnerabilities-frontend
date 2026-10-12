@@ -24,11 +24,11 @@ import play.api.libs.ws.DefaultBodyReadables.*
 import play.api.libs.ws.DefaultBodyWritables.*
 import support.IntegrationSpec
 
-class StubGuidanceISpec extends IntegrationSpec {
+class StubGuidanceISpec extends IntegrationSpec:
   override protected def useVulnerabilityStub: Boolean = true
 
-  "Stub guidance journey" - {
-    "add, edit and delete guidance across real requests without publishing the audit comment" in {
+  "Stub guidance journey" should:
+    "add, edit and delete guidance across real requests without publishing the audit comment" in:
       authorise(canManageGuidance = true)
       stubFor(get(urlEqualTo(releasesPath)).willReturn(okJson("[]")))
       val detail = "/vulnerabilities-frontend/vulnerabilities/DEMO-UNAVAILABLE"
@@ -63,6 +63,3 @@ class StubGuidanceISpec extends IntegrationSpec {
       removed.select(s"a[href='$edit']").text() mustBe "Add platform guidance"
       removed.text() must not include comment
       verify(0, putRequestedFor(urlMatching("/vulnerabilities/api/.*")))
-    }
-  }
-}

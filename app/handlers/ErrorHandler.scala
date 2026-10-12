@@ -30,18 +30,16 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class ErrorHandler @Inject()(
-                              val messagesApi: MessagesApi,
-                              catalogueWrapper: CatalogueWrapperService,
-                              view: ErrorTemplate
-                            )(override implicit val ec: ExecutionContext) extends FrontendErrorHandler with I18nSupport {
+  val messagesApi: MessagesApi,
+  catalogueWrapper: CatalogueWrapperService,
+  view: ErrorTemplate
+)(using override val ec: ExecutionContext) extends FrontendErrorHandler with I18nSupport:
 
-  override def standardErrorTemplate(pageTitle: String, heading: String, message: String)(implicit rh: RequestHeader): Future[Html] = {
-    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequestAndSession(rh, rh.session)
+  override def standardErrorTemplate(pageTitle: String, heading: String, message: String)(using rh: RequestHeader): Future[Html] =
+    given HeaderCarrier = HeaderCarrierConverter.fromRequestAndSession(rh, rh.session)
     catalogueWrapper.standardCatalogueLayout(
-      content = view(heading, message),
-      pageTitle = Some(messagesApi.preferred(rh)(pageTitle)),
+      content     = view(heading, message),
+      pageTitle   = Some(messagesApi.preferred(rh)(pageTitle)),
       showSignOut = false,
-      fullWidth = false
+      fullWidth   = false
     )
-  }
-}

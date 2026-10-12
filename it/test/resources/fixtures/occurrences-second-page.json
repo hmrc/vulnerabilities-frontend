@@ -1,6 +1,7 @@
 {
   "results": [
     {
+      "occurrenceId": "OCC-12345",
       "vulnerabilityId": "CVE-2099-1234",
       "serviceName": "integration-alpha",
       "appVersion": "1.2.4",

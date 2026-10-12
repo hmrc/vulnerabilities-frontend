@@ -19,10 +19,7 @@ package config
 import com.google.inject.AbstractModule
 import controllers.actions.{DefaultInternalAuthAction, InternalAuthAction}
 
-class Module extends AbstractModule {
+class Module extends AbstractModule:
 
-  override def configure(): Unit = {
-
+  override def configure(): Unit =
     bind(classOf[InternalAuthAction]).to(classOf[DefaultInternalAuthAction])
-  }
-}

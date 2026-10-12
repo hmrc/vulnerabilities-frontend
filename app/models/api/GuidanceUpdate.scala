@@ -18,10 +18,16 @@ package models.api
 
 import play.api.libs.json.{JsNull, JsString, JsValue, Json, OWrites}
 
-case class GuidanceUpdate(guidance: Option[String], comment: String, author: String)
+case class GuidanceUpdate(
+  guidance: Option[String],
+  comment : String,
+  author  : String
+)
 
-object GuidanceUpdate {
-  given OWrites[GuidanceUpdate] = OWrites { update =>
-    Json.obj("guidance" -> update.guidance.fold[JsValue](JsNull)(JsString.apply), "comment" -> update.comment, "author" -> update.author)
-  }
-}
+object GuidanceUpdate:
+  given OWrites[GuidanceUpdate] = OWrites: update =>
+    Json.obj(
+      "guidance" -> update.guidance.fold[JsValue](JsNull)(JsString.apply),
+      "comment"  -> update.comment,
+      "author"   -> update.author
+    )

@@ -19,11 +19,11 @@ package viewmodels
 import java.net.URI
 import scala.util.Try
 
-object GuidanceText {
+object GuidanceText:
   case class Part(text: String, url: Option[String] = None)
   private val urlPattern = """https?://[^\s<>"']+""".r
 
-  def parts(text: String): Seq[Part] = {
+  def parts(text: String): Seq[Part] =
     val result = Vector.newBuilder[Part]
     var end = 0
     urlPattern.findAllMatchIn(text).foreach { matched =>
@@ -36,5 +36,3 @@ object GuidanceText {
     }
     result += Part(text.substring(end))
     result.result()
-  }
-}

@@ -19,14 +19,13 @@ package forms
 import play.api.data.Form
 import play.api.data.Forms.*
 
-object GuidanceForms {
+object GuidanceForms:
   private def content(label: String, maximum: Int) = text.transform[String](_.trim, identity)
     .verifying(s"Enter $label", _.nonEmpty)
     .verifying(s"$label must be $maximum characters or fewer", _.length <= maximum)
 
   val save: Form[(String, String)] = Form(tuple(
     "guidance" -> content("guidance", 10000),
-    "comment" -> content("a reason for this change", 1000)
+    "comment"  -> content("a reason for this change", 1000)
   ))
   val delete: Form[String] = Form(single("comment" -> content("a reason for this change", 1000)))
-}

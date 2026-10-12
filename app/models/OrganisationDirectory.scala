@@ -19,16 +19,24 @@ package models
 import play.api.libs.json.{Json, Reads}
 
 case class DirectoryTeam(name: String)
-object DirectoryTeam { given Reads[DirectoryTeam] = Json.reads[DirectoryTeam] }
+object DirectoryTeam:
+  given Reads[DirectoryTeam] = Json.reads[DirectoryTeam]
 
-case class DirectoryService(name: String, digitalServiceName: Option[String])
-object DirectoryService { given Reads[DirectoryService] = Json.reads[DirectoryService] }
+case class DirectoryService(
+  name              : String,
+  digitalServiceName: Option[String]
+)
+object DirectoryService:
+  given Reads[DirectoryService] = Json.reads[DirectoryService]
 
-case class OrganisationDirectory(teams: Seq[String], repositories: Seq[DirectoryService], digitalServices: Seq[String]) {
+case class OrganisationDirectory(
+  teams          : Seq[String],
+  repositories   : Seq[DirectoryService],
+  digitalServices: Seq[String]
+):
   val services: Seq[String] = repositories.map(_.name).distinct.sorted
   def includes(digitalService: String, service: String): Boolean =
     repositories.exists(repo => repo.name == service && repo.digitalServiceName.contains(digitalService))
-}
-object OrganisationDirectory {
+
+object OrganisationDirectory:
   val empty: OrganisationDirectory = OrganisationDirectory(Seq.empty, Seq.empty, Seq.empty)
-}

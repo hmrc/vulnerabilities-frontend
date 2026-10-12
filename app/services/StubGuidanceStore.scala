@@ -17,14 +17,11 @@
 package services
 
 /** In-memory backend substitute, scoped to one connector/application instance. */
-class StubGuidanceStore {
+class StubGuidanceStore:
   private var values = Map.empty[String, Option[String]]
 
-  def current(id: String, original: Option[String]): Option[String] = synchronized {
+  def current(id: String, original: Option[String]): Option[String] = synchronized:
     values.getOrElse(id, original)
-  }
 
-  def update(id: String, guidance: Option[String]): Unit = synchronized {
+  def update(id: String, guidance: Option[String]): Unit = synchronized:
     values = values.updated(id, guidance)
-  }
-}

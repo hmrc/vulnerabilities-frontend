@@ -18,19 +18,16 @@ package forms
 
 import base.SpecBase
 
-class GuidanceFormsSpec extends SpecBase {
-  "Guidance forms" - {
-    "require meaningful guidance and an audit comment" in {
-      GuidanceForms.save.bind(Map("guidance" -> "   ", "comment" -> "\n")).errors.map(_.key).toSet mustBe Set("guidance", "comment")
-      GuidanceForms.save.bind(Map("guidance" -> "x" * 10001, "comment" -> "x" * 1001)).hasErrors mustBe true
+class GuidanceFormsSpec extends SpecBase:
+  "Guidance forms" should:
+    "require meaningful guidance and an audit comment" in:
+      GuidanceForms.save.bind(Map("guidance"  -> "   ", "comment" -> "\n")).errors.map(_.key).toSet mustBe Set("guidance", "comment")
+      GuidanceForms.save.bind(Map("guidance"  -> "x" * 10001, "comment" -> "x" * 1001)).hasErrors mustBe true
       GuidanceForms.delete.bind(Map("comment" -> " ")).hasErrors mustBe true
       GuidanceForms.delete.bind(Map("comment" -> "x" * 1001)).hasErrors mustBe true
-    }
-    "trim content, accept the limits and bind no author from browser input" in {
+    
+    "trim content, accept the limits and bind no author from browser input" in:
       GuidanceForms.save.bind(Map("guidance" -> " guidance ", "comment" -> " reason ", "author" -> "someone-else")).value.value mustBe
         (("guidance", "reason"))
       GuidanceForms.save.bind(Map("guidance" -> "x" * 10000, "comment" -> "x" * 1000)).hasErrors mustBe false
       GuidanceForms.delete.bind(Map("comment" -> " deleted ", "guidance" -> "ignored")).value.value mustBe "deleted"
-    }
-  }
-}

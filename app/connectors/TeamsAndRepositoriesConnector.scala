@@ -28,21 +28,20 @@ import scala.concurrent.duration.FiniteDuration
 
 @Singleton
 class TeamsAndRepositoriesConnector @Inject() (
-  httpClient: HttpClientV2,
+  httpClient    : HttpClientV2,
   servicesConfig: ServicesConfig,
-  configuration: Configuration
-)(implicit ec: ExecutionContext) {
+  configuration : Configuration
+)(using ExecutionContext):
   private val baseUrl = servicesConfig.baseUrl("teams-and-repositories")
-  private val cache = new SnapshotCache[OrganisationDirectory](configuration.get[FiniteDuration]("teams-and-repositories.cache-ttl"))
+  private val cache   = new SnapshotCache[OrganisationDirectory](configuration.get[FiniteDuration]("teams-and-repositories.cache-ttl"))
 
-  def getDirectory()(implicit hc: HeaderCarrier): Future[OrganisationDirectory] = cache.get {
+  def getDirectory()(using HeaderCarrier): Future[OrganisationDirectory] = cache.get {
     val teams = httpClient.get(url"$baseUrl/api/v2/teams").execute[Seq[DirectoryTeam]]
     val repositories = httpClient.get(url"$baseUrl/api/v2/repositories?repoType=Service").execute[Seq[DirectoryService]]
     val digitalServices = httpClient.get(url"$baseUrl/api/v2/digital-services").execute[Seq[String]]
-    for {
-      allTeams <- teams
-      allRepositories <- repositories
+    for
+      allTeams           <- teams
+      allRepositories    <- repositories
       allDigitalServices <- digitalServices
-    } yield OrganisationDirectory(allTeams.map(_.name).distinct.sorted, allRepositories, allDigitalServices.distinct.sorted)
+    yield OrganisationDirectory(allTeams.map(_.name).distinct.sorted, allRepositories, allDigitalServices.distinct.sorted)
   }
-}

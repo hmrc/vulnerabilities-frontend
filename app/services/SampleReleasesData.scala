@@ -18,7 +18,7 @@ package services
 
 import models.releases.{WhatsRunningWhere, WhatsRunningWhereVersion}
 
-object SampleReleasesData {
+object SampleReleasesData:
   val services: Seq[WhatsRunningWhere] = Seq(
     WhatsRunningWhere("example-payments-api", List(
       WhatsRunningWhereVersion("production", "1.8.0"),
@@ -28,4 +28,3 @@ object SampleReleasesData {
     WhatsRunningWhere("example-payments-frontend", List(WhatsRunningWhereVersion("production", "3.2.0"))),
     WhatsRunningWhere("example-audit-service", List(WhatsRunningWhereVersion("production", "2.4.0")))
   )
-}

@@ -17,7 +17,8 @@
 package connectors
 
 import javax.inject.{Inject, Singleton}
-import models.api.{VulnerabilityDetails, VulnerabilityOccurrences, OccurrenceQuery, GuidanceUpdate}
+import models.api.{GuidanceUpdate, OccurrenceQuery, Vulnerabilities, VulnerabilityDetails, VulnerabilityOccurrences}
+
 import java.net.{URI, URLEncoder}
 import java.nio.charset.StandardCharsets.UTF_8
 import play.api.Configuration
@@ -28,6 +29,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps, Upstream
 import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -35,55 +37,60 @@ class VulnerabilitiesConnector @Inject() (
   httpClient: HttpClientV2,
   servicesConfig: ServicesConfig,
   configuration: Configuration
-)(implicit ec: ExecutionContext) {
+)(using ExecutionContext):
   private val baseUrl = servicesConfig.baseUrl("vulnerabilities")
   private val useStub = configuration.get[Boolean]("vulnerabilities.use-stub")
   private val guidanceStore = new StubGuidanceStore
 
   def getVulnerability(
-    vulnerabilityId: String,
-    includeOccurrenceSummary: Boolean = false
-  )(implicit hc: HeaderCarrier): Future[Option[VulnerabilityDetails]] =
-    if (useStub) {
-      Future.successful(SampleVulnerabilityData.details(vulnerabilityId, includeOccurrenceSummary)
+    vulnerabilityId         : String,
+    includeOccurrenceSummary: Boolean = false,
+    includeOccurrenceDetails: Boolean = false
+  )(using HeaderCarrier): Future[Option[VulnerabilityDetails]] =
+    if useStub then
+      Future.successful(SampleVulnerabilityData.details(vulnerabilityId, includeOccurrenceSummary, includeOccurrenceDetails)
         .map(details => details.copy(guidance = guidanceStore.current(details.vulnerabilityId, details.guidance))))
-    } else {
+    else
       httpClient
-        .get(url"$baseUrl/vulnerabilities/api/v2/vulnerabilities/$vulnerabilityId?includeOccurrenceSummary=${includeOccurrenceSummary.toString}")
+        .get(url"$baseUrl/vulnerabilities/api/v2/vulnerabilities/$vulnerabilityId?includeOccurrenceSummary=${includeOccurrenceSummary.toString}&includeOccurrenceDetails=${includeOccurrenceDetails.toString}")
         .execute[Option[VulnerabilityDetails]]
-    }
 
-  def putGuidance(vulnerabilityId: String, update: GuidanceUpdate)(implicit hc: HeaderCarrier): Future[Unit] =
-    if (useStub) {
-      SampleVulnerabilityData.details(vulnerabilityId, includeOccurrenceSummary = false) match {
-        case None => Future.failed(UpstreamErrorResponse("Vulnerability not found", 404))
+  def getVulnerabilities(
+    limit                   : Int = 50,
+    offset                  : Int = 0,
+    includeOccurrenceSummary: Boolean = false,
+    includeOccurrenceDetails: Boolean = false
+  )(using HeaderCarrier): Future[Vulnerabilities] =
+    if useStub then
+      Future.successful(SampleVulnerabilityData.vulnerabilities(limit, offset, includeOccurrenceSummary, includeOccurrenceDetails))
+    else
+      httpClient
+        .get(url"$baseUrl/vulnerabilities/api/v2/vulnerabilities?includeOccurrenceSummary=${includeOccurrenceSummary.toString}&includeOccurrenceDetails=${includeOccurrenceDetails.toString}&limit=${limit.toString}&offset=${offset.toString}")
+        .execute[Vulnerabilities]
+        
+  def putGuidance(vulnerabilityId: String, update: GuidanceUpdate)(using HeaderCarrier): Future[Unit] =
+    if useStub then
+      SampleVulnerabilityData.details(vulnerabilityId, includeOccurrenceSummary = false) match
+        case None          => Future.failed(UpstreamErrorResponse("Vulnerability not found", 404))
         case Some(details) =>
           guidanceStore.update(details.vulnerabilityId, update.guidance)
           Future.unit
-      }
-    } else {
+    else
       httpClient.put(url"$baseUrl/vulnerabilities/api/v2/vulnerabilities/$vulnerabilityId/guidance")
         .withBody(Json.toJson(update))
-        .execute[Either[UpstreamErrorResponse, HttpResponse]].flatMap {
+        .execute[Either[UpstreamErrorResponse, HttpResponse]].flatMap:
           case Right(response) if response.status == 204 => Future.unit
           case Right(response) => Future.failed(new IllegalStateException(s"Unexpected guidance response status: ${response.status}"))
-          case Left(error) => Future.failed(error)
-        }
-    }
+          case Left(error)     => Future.failed(error)
 
   def getOccurrences(
     vulnerabilityId: String,
     query: OccurrenceQuery = OccurrenceQuery()
-  )(implicit hc: HeaderCarrier): Future[VulnerabilityOccurrences] =
-    if (useStub) {
+  )(using HeaderCarrier): Future[VulnerabilityOccurrences] =
+    if useStub then
       Future.successful(SampleVulnerabilityData.occurrences(vulnerabilityId, query))
-    } else {
-      val endpoint = url"$baseUrl/vulnerabilities/api/v2/unique-vulnerabilities/$vulnerabilityId/occurrences"
-      val queryString = query.parameters.map { case (key, value) =>
-        s"$key=${URLEncoder.encode(value, UTF_8)}"
-      }.mkString("&")
-      val target = if (queryString.isEmpty) endpoint else URI.create(s"$endpoint?$queryString").toURL
+    else
+      val endpoint    = url"$baseUrl/vulnerabilities/api/v2/unique-vulnerabilities/$vulnerabilityId/occurrences"
+      val queryString = query.parameters.map{ case (key, value) =>s"$key=${URLEncoder.encode(value, UTF_8)}"}.mkString("&")
+      val target      = if queryString.isEmpty then endpoint else URI.create(s"$endpoint?$queryString").toURL
       httpClient.get(target).execute[VulnerabilityOccurrences]
-    }
-
-}

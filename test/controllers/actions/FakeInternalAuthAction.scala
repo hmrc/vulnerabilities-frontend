@@ -20,7 +20,6 @@ import javax.inject.Inject
 import play.api.mvc.*
 import scala.concurrent.{ExecutionContext, Future}
 
-class FakeInternalAuthAction @Inject() (val parser: BodyParsers.Default)(implicit val executionContext: ExecutionContext) extends InternalAuthAction {
+class FakeInternalAuthAction @Inject() (val parser: BodyParsers.Default)(using val executionContext: ExecutionContext) extends InternalAuthAction:
   override def invokeBlock[A](request: Request[A], block: InternalAuthRequest[A] => Future[Result]): Future[Result] =
     block(new InternalAuthRequest(request, canManageGuidance = false, username = "test-reader"))
-}

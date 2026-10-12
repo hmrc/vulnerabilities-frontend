@@ -21,9 +21,8 @@ import play.api.libs.json.{Reads, __}
 
 case class WhatsRunningWhere(serviceName: String, versions: List[WhatsRunningWhereVersion])
 
-object WhatsRunningWhere {
-  given Reads[WhatsRunningWhere] = (
-    (__ \ "applicationName").read[String] and
-    (__ \ "versions").read[List[WhatsRunningWhereVersion]]
+object WhatsRunningWhere:
+  given Reads[WhatsRunningWhere] =
+    ( (__ \ "applicationName").read[String]
+    ~ (__ \ "versions"       ).read[List[WhatsRunningWhereVersion]]
   )(WhatsRunningWhere.apply)
-}
