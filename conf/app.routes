@@ -10,8 +10,5 @@ GET         /vulnerabilities/:id/guidance/edit             controllers.GuidanceC
 POST        /vulnerabilities/:id/guidance                  controllers.GuidanceController.save(id: String)
 GET         /vulnerabilities/:id/guidance/delete           controllers.GuidanceController.confirmDelete(id: String)
 POST        /vulnerabilities/:id/guidance/delete           controllers.GuidanceController.delete(id: String)
-GET         /catalogue-sign-out                          controllers.VulnerabilityController.signOut()
 
 GET         /assets/*file                                controllers.Assets.versioned(path="/public", file: Asset)
-
-GET         /account/signed-out                          controllers.SignedOutController.onPageLoad()
