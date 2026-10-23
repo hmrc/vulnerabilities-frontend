@@ -46,8 +46,7 @@ class GuidanceController @Inject() (
   private val editor = internalAuth.andThen(guidanceWrite)
 
   private def render(content: Html, title: String, status: Status)(using HeaderCarrier, RequestHeader): Future[Result] =
-    wrapper.standardCatalogueLayout(content = content, pageTitle = Some(title), activeItemId = Some("vulnerabilities"),
-      signOutUrl = Some(routes.VulnerabilityController.signOut().url), stylesheets = Seq(styles()), fullWidth = false)
+    wrapper.standardCatalogueLayout(content = content, pageTitle = Some(title), activeItemId = Some("vulnerabilities"), stylesheets = Seq(styles()), fullWidth = false)
       .map(status(_))
 
   private def missing(using RequestHeader): Future[Result] =
